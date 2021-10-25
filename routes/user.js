@@ -3,13 +3,24 @@ var router = express.Router();
 const userModel = require("../models/user");
 const auth = require("../models/auth");
 const jwt = require('jsonwebtoken');
+const objects = require('../models/objects');
 const secret = process.env.JWT_SECRET;
 
-router.post('/register', async function(req, res) {
+router.get('/profile/',
+(req, res, next) => auth.checkToken(req, res, next),
+async function(req, res) {
+    const email = req.email;
+    const profile = await userModel.getProfile(email);
+    delete profile.password;
+    delete profile._id;
+    return res.status(200).json(profile);
+});
+
+router.post('/register/', async function(req, res) {
     var email = req.body.email;
     var plainPass = req.body.password;
     if (!email || !plainPass) {
-        return res.status(401).json({
+        return res.status(403).json({
             data: {
                 msg: "Register failed, all fields must be filled"
             }
@@ -20,14 +31,14 @@ router.post('/register', async function(req, res) {
     return res.status(insert.status).json(insert);
 });
 
-router.post('/deposit',
+router.post('/deposit/',
 (req, res, next) => auth.checkToken(req, res, next),
 async function(req, res) {
 
     var email = req.email;
     var amount = req.body.amount;
     if (!email || !amount) {
-        return res.status(401).json({
+        return res.status(403).json({
             data: {
                 msg: "Deposit failed, all fields must be filled"
             }
@@ -38,12 +49,12 @@ async function(req, res) {
     return res.status(result.status).json(result);
 });
 
-router.get('/funds',
+router.get('/funds/',
 (req, res, next) => auth.checkToken(req, res, next),
 async function(req, res) {
     var email = req.email;
     if (!email) {
-        return res.status(401).json({
+        return res.status(403).json({
             data: {
                 msg: "You need to login first"
             }
@@ -54,41 +65,19 @@ async function(req, res) {
     return res.status(result.status).json(result);
 });
 
-router.get('/stocks',
+router.get('/stocks/',
 (req, res, next) => auth.checkToken(req, res, next),
 async function(req, res) {
     var email = req.email;
     if (!email) {
-        return res.status(401).json({
-            data: {
-                msg: "You need to login first"
-            }
-        });
+        return res.status(403);
     }
 
-    var result = await userModel.getStocksOfUser(email);
-
-    return res.status(result.status).json(result);
+    const stocks = await userModel.getStocksOfUser(email);
+    return res.status(200).json({stocks: stocks});
 });
 
-router.get('/stocks/:name',
-(req, res, next) => auth.checkToken(req, res, next),
-async function(req, res) {
-    var email = req.email;
-    let nameOfStock = req.params.name;
-    if (!email) {
-        return res.status(401).json({
-            data: {
-                msg: "You need to login first"
-            }
-        });
-    }
-    var all = await userModel.getStocksOfUser(email);
-    var specific = all.stocks.find(({name}) => name === nameOfStock);
-    return res.status(all.status).json(specific);
-});
-
-router.post('/login', async function(req, res) {
+router.post('/login/', async function(req, res) {
     var email = req.body.email;
     var plainPass = req.body.password;
     if (!email || !plainPass) {
@@ -114,14 +103,17 @@ router.post('/login', async function(req, res) {
             res: "Password not a match",
         });
     } else {
-        let payload = { email: email };
-        let token = jwt.sign(payload, secret, { expiresIn: '12h'});
+        const payload = { email: email };
+        const user = succes.user;
+        delete user.password;
+        delete user._id;
+        const token = jwt.sign(payload, secret, { expiresIn: '12h'});
         let cookieSettings = {maxAge: 604800000};
         if (process.env.NODE_ENV === 'production') {
             cookieSettings.secure = true;
             cookieSettings.domain = ".oscarlang.me";
         }
-        return res.status(200).cookie('jwt', token, cookieSettings).send("OK");
+        return res.cookie('jwt', token, cookieSettings).json(user);
     }
 });
 

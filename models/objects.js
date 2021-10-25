@@ -1,4 +1,10 @@
 const mongo = require("mongodb").MongoClient;
+var getYear = require('date-fns/getYear');
+var getMonth = require('date-fns/getMonth');
+var getDay = require('date-fns/getDay');
+var getMinutes = require('date-fns/getMinutes');
+var getHours = require('date-fns/getHours');
+var format = require('date-fns/format');
 const dsn =  "mongodb://localhost:27017";
 let dbName = 'project';
 if (process.env.NODE_ENV === 'test') {
@@ -6,7 +12,13 @@ if (process.env.NODE_ENV === 'test') {
 }
 
 async function insertObject(stock, name, startPrice, startQuantity, rate, variance) {
-    let now = new Date();
+    const date = new Date();
+    const formatedDate = format(date, "yyyy/MM/dd-HH:mm");
+    const year = getYear(date);
+    const month = getMonth(date);
+    const day = getDay(date);
+    const hour = getHours(date);
+    const minute = getMinutes(date);
     let obj = {
         stock: stock,
         name: name,
@@ -14,10 +26,22 @@ async function insertObject(stock, name, startPrice, startQuantity, rate, varian
         quantity: startQuantity,
         rate: rate,
         variance: variance,
-        history: [
+        minutly: [
             {
                 price: startPrice,
-                time: now
+                date: formatedDate
+            }
+        ],
+        hourly: [
+            {
+                price: startPrice,
+                date: formatedDate
+            }
+        ],
+        daily: [
+            {
+                price: startPrice,
+                date: formatedDate
             }
         ]
     };
@@ -38,12 +62,28 @@ async function insertObject(stock, name, startPrice, startQuantity, rate, varian
     };
 }
 
+async function getObjectsIn(email) {
+    const client  = await mongo.connect(dsn);
+    const db = await client.db(dbName);
+    const col = await db.collection('users');
+    const user = await col.findOne({email: email});
+    const userStocks = user.stocks;
+    
+    const objCol = await db.collection('objects');
+    const res = await objCol.find({stock: { $in: userStocks.map(stock => stock.name)}})
+    .map((stock) => {
+        const stockWithName = userStocks.find((s) =>s.name = stock.name);
+        return {...stock, ...stockWithName};
+    })
+    .toArray();
+    return res;
+}
+
 async function getAllObjects() {
     const client  = await mongo.connect(dsn);
     const db = await client.db(dbName);
     const col = await db.collection('objects');
     const res = await col.find().toArray();
-    console.log(res);
     await client.close();
     if (res) {
         return {
@@ -89,7 +129,7 @@ async function getOneObject(stock) {
 module.exports = {
     insertObject: insertObject,
     getAllObjects: getAllObjects,
-    // getAmountAvailableOfStock: getAmountAvailableOfStock,
+    getObjectsIn: getObjectsIn,
     changeQuantityInMarket:changeQuantityInMarket,
     getOneObject: getOneObject
 };

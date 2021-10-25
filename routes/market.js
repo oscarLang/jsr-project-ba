@@ -43,8 +43,8 @@ router.post('/buy', (req, res, next) => auth.checkToken(req, res, next), async f
             err: "No stock with that name found",
         });
     }
-    if (fundsOfUser.funds < totalPrice) {
-        return res.status(401).json({
+    if (fundsOfUser && (fundsOfUser.funds < totalPrice)) {
+        return res.status(403).json({
             err: "Not enough funds",
         });
     }
@@ -52,7 +52,7 @@ router.post('/buy', (req, res, next) => auth.checkToken(req, res, next), async f
         await objects.changeQuantityInMarket(stock, amount * -1);
     } catch (e) {
         console.log(e);
-        return res.status(401).json({
+        return res.status(400).json({
             err: "error changing quantity in market"
         });
     }
@@ -60,7 +60,7 @@ router.post('/buy', (req, res, next) => auth.checkToken(req, res, next), async f
         await user.changeUserStockAndFunds(email, stock, amount, (totalPrice * -1), price);
     } catch (e) {
         console.log(e);
-        return res.status(401).json({
+        return res.status(400).json({
             err: "error changing user stock"
         });
     }

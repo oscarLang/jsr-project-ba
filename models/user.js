@@ -2,6 +2,7 @@ const mongo = require("mongodb").MongoClient;
 const dsn =  "mongodb://localhost:27017";
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const objects = require("../models/objects");
 
 const saltRounds = 10;
 const secret = process.env.JWT_SECRET;
@@ -17,6 +18,7 @@ async function insertUser(email, plainPass) {
         var user = {
             email: email,
             password: hashedPassword,
+            funds: 0,
             stocks: []
         };
         const client  = await mongo.connect(dsn);
@@ -36,6 +38,12 @@ async function insertUser(email, plainPass) {
     };
 }
 
+async function getProfile(email) {
+    const client  = await mongo.connect(dsn);
+    const profile = findOneUserByEmail(client, email)
+    return profile;
+}
+
 async function findOneUserByEmail(client, email) {
     const db = await client.db(dbName);
     const col = await db.collection('users');
@@ -53,7 +61,8 @@ async function authenticateUser(email, plain) {
             return {
                 err: false,
                 status: 200,
-                result: isSame
+                result: isSame,
+                user: user
             };
         } else {
             return {
@@ -109,19 +118,19 @@ async function getFunds(email) {
 }
 
 async function getStocksOfUser(email) {
-    let res = {
-        msg: "Stocks",
-        status: 200
-    };
     const client  = await mongo.connect(dsn);
-    const user = await findOneUserByEmail(client, email);
-    if (!user) {
-        res.msg = "No user found";
-        res.status = 404;
-    } else {
-        res.stocks = user.stocks.filter(stock => stock.amount > 0);
-    }
-    await client.close();
+    const db = await client.db(dbName);
+    const col = await db.collection('users');
+    const user = await col.findOne({email: email});
+    const userStocks = user.stocks;
+    
+    const objCol = await db.collection('objects');
+    const res = await objCol.find({stock: { $in: userStocks.map(stock => stock.name)}})
+    .map((stock) => {
+        const stockWithName = userStocks.find((s) =>s.name = stock.name);
+        return {...stock, ...stockWithName};
+    })
+    .toArray();
     return res;
 }
 
@@ -191,9 +200,11 @@ async function changeUserStockAndFunds(email, stock, amount, totalPrice, price=0
 
 module.exports = {
     insertUser: insertUser,
+    getProfile: getProfile,
     authenticateUser: authenticateUser,
     deposit: deposit,
     getFunds: getFunds,
+    findOneUserByEmail: findOneUserByEmail,
     getStocksOfUser: getStocksOfUser,
-    changeUserStockAndFunds: changeUserStockAndFunds,
+    changeUserStockAndFunds: changeUserStockAndFunds
 };

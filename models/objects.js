@@ -11,39 +11,16 @@ if (process.env.NODE_ENV === 'test') {
     dbName = 'test';
 }
 
-async function insertObject(stock, name, startPrice, startQuantity, rate, variance) {
-    const date = new Date();
-    const formatedDate = format(date, "yyyy/MM/dd-HH:mm");
-    const year = getYear(date);
-    const month = getMonth(date);
-    const day = getDay(date);
-    const hour = getHours(date);
-    const minute = getMinutes(date);
+async function insertObject(ticker, name, ceo, catchPhrase, startPrice, startQuantity, volatility, history) {
     let obj = {
-        stock: stock,
+        ticker: ticker,
         name: name,
+        ceo: ceo,
+        catchPhrase: catchPhrase,
         price: startPrice,
         quantity: startQuantity,
-        rate: rate,
-        variance: variance,
-        minutly: [
-            {
-                price: startPrice,
-                date: formatedDate
-            }
-        ],
-        hourly: [
-            {
-                price: startPrice,
-                date: formatedDate
-            }
-        ],
-        daily: [
-            {
-                price: startPrice,
-                date: formatedDate
-            }
-        ]
+        volatility: volatility,
+        ...history
     };
     const client  = await mongo.connect(dsn);
     const db = await client.db(dbName);
@@ -68,7 +45,7 @@ async function getObjectsIn(email) {
     const col = await db.collection('users');
     const user = await col.findOne({email: email});
     const userStocks = user.stocks;
-    
+
     const objCol = await db.collection('objects');
     const res = await objCol.find({stock: { $in: userStocks.map(stock => stock.name)}})
     .map((stock) => {

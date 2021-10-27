@@ -8,7 +8,7 @@ var faker = require('faker');
 const objects = require("./models/objects");
 const user = require("./models/user");
 const mongo = require("mongodb").MongoClient;
-const dsn = "mongodb://192.168.1.65:27017";
+const dsn = "mongodb://localhost:27017";
 let dbName = 'project';
 const existingTickers = [];
 (async function(){
@@ -18,16 +18,14 @@ const existingTickers = [];
     await user.insertUser("test@test.com", "pass");
 
     const now = new Date();
-
-
-    for (let j = 0; j < 5; j++) {
+    for (let j = 0; j < 3; j++) {
         const companyName = faker.company.companyName();
         const ticker = generateTicker(companyName);
         const catchPhrase = faker.company.catchPhrase();
         const ceo = faker.name.firstName() + " " + faker.name.lastName();
         const startPrice = getRandomInt(20, 200);
         const startAmount = getRandomInt(100000, 1000000000000);
-        const volatility = (Math.random() * (0.0050 - 0.0005) + 0.0005);
+        const volatility = (Math.random() * (0.10 - 0.01) + 0.01);
         const history = generateHistory(now, startPrice, volatility);
         await objects.insertObject(
             ticker,
@@ -45,18 +43,18 @@ const existingTickers = [];
 
 
 function getRandomInt(min, max) {
-  min = Math.ceil(min);
-  max = Math.floor(max);
-  return Math.floor(Math.random() * (max - min) + min);
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min) + min);
 }
 
 
 function generateTicker(companyName) {
-    let ticker = "";
-    while (!ticker || existingTickers.includes(ticker)) {
-        let chars = companyName.match(/[A-Z]/g);
-        ticker = chars.join("");
+    let ticker = companyName.match(/[A-Z]/g).join("");;
+    while (existingTickers.includes(ticker)) {
+        ticker += getRandomInt(1,9);
     }
+    existingTickers.push(ticker);
     return ticker;
 }
 
@@ -68,24 +66,21 @@ function generateHistory(initDate, initPrice, volatility) {
     for(let i = 0; i < 43200 ; i++) {
         price = getNewPrice(price, volatility);
         const date = subMinutes(initDate, i);
-        if (i < 1440) {
+        if (i < 60) {
             const minutlyDate = startOfMinute(date);
             minutly.push({
                 date: minutlyDate,
-                formatedDate: format(minutlyDate, "yyyy/MM/dd-HH:mm"),
                 price: price});
         }
-        if (i % 60 === 0) {
+        if ((i % 60 === 0) && (i < 1440)) {
             const hourlyDate = startOfHour(date);
             hourly.push({
-                formatedDate: format(hourlyDate, "yyyy/MM/dd-HH:mm"),
                 date: hourlyDate,
                 price: price});
         }
         if (i % 1440 === 0 ) {
             const dailyDate = startOfDay(date);
             daily.push({
-                formatedDate: format(dailyDate, "yyyy/MM/dd-HH:mm"),
                 date: dailyDate,
                 price: price});
         }
@@ -94,12 +89,13 @@ function generateHistory(initDate, initPrice, volatility) {
     return {minutly: minutly, hourly: hourly, daily: daily};
 }
 
-function getNewPrice(price, volatility) {
+function getNewPrice(old, volatility) {
     const random = Math.random();
-    let changeInPercent = (2 * volatility * random);
+    let changeInPercent = (2 * (volatility * random));
     if (changeInPercent > volatility) {
         changeInPercent -= (2 * volatility);
     }
-    let newPrice = price + (price * changeInPercent);
-    return parseFloat(newPrice).toFixed(2);
+    let change = old * changeInPercent;
+    let newPrice = +old + +change;
+    return parseFloat(newPrice).toFixed(5);
 }

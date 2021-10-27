@@ -89,7 +89,7 @@ async function deposit(email, amount) {
     const client  = await mongo.connect(dsn);
     const db = await client.db(dbName);
     const col = await db.collection('users');
-    var updated = await col.updateOne({email: email}, { $inc: { balance: amountInteger }});
+    var updated = await col.updateOne({email: email}, { $inc: { funds: amountInteger }});
     if (updated.matchedCount == 0) {
         res = {
             msg: "Insertion failed",
@@ -111,7 +111,7 @@ async function getFunds(email) {
         res.msg = "No user found";
         res.status = 404;
     } else {
-        res.funds = user.balance;
+        res.funds = user.funds;
     }
     await client.close();
     return res;
@@ -145,7 +145,7 @@ async function changeUserStockAndFunds(email, stock, amount, totalPrice, price=0
         },
         {
             $inc: {
-                balance: totalPrice,
+                funds: totalPrice,
             }
         });
     if (updated.matchedCount == 0) {

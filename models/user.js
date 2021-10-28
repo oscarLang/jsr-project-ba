@@ -122,16 +122,7 @@ async function getStocksOfUser(email) {
     const db = await client.db(dbName);
     const col = await db.collection('users');
     const user = await col.findOne({email: email});
-    const userStocks = user.stocks;
-    
-    const objCol = await db.collection('objects');
-    const res = await objCol.find({stock: { $in: userStocks.map(stock => stock.name)}})
-    .map((stock) => {
-        const stockWithName = userStocks.find((s) =>s.name = stock.name);
-        return {...stock, ...stockWithName};
-    })
-    .toArray();
-    return res;
+    return user.stocks;
 }
 
 async function changeUserStockAndFunds(email, stock, amount, totalPrice, price=0) {

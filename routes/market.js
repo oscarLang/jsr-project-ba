@@ -37,7 +37,6 @@ router.post('/buy', (req, res, next) => auth.checkToken(req, res, next), async f
     let price = (oneObject.price < 0) ? (oneObject.price * -1) : oneObject.price;
     let totalPrice = (price * amount);
     let fundsOfUser = await user.getFunds(email);
-    console.log(fundsOfUser);
     if (!oneObject) {
         return res.status(404).json({
             err: "No stock with that name found",
@@ -46,14 +45,6 @@ router.post('/buy', (req, res, next) => auth.checkToken(req, res, next), async f
     if (fundsOfUser && (fundsOfUser.funds < totalPrice)) {
         return res.status(403).json({
             err: "Not enough funds",
-        });
-    }
-    try {
-        await objects.changeQuantityInMarket(stock, amount * -1);
-    } catch (e) {
-        console.log(e);
-        return res.status(400).json({
-            err: "error changing quantity in market"
         });
     }
     try {
@@ -79,7 +70,7 @@ router.post('/sell', (req, res, next) => auth.checkToken(req, res, next), async 
     let totalPrice = (price * amount);
     let stocksOfUser = await user.getStocksOfUser(email);
     console.log(stocksOfUser);
-    let stockToSell = stocksOfUser.stocks.find(({name}) => name === stock);
+    let stockToSell = stocksOfUser.find((s) => s.name === stock);
 
     if (stockToSell && (stockToSell.amount < amount)) {
         return res.status(404).json({
@@ -91,17 +82,9 @@ router.post('/sell', (req, res, next) => auth.checkToken(req, res, next), async 
             err: "User not found",
         });
     }
-    if (!oneObject) {
+    if (!oneObject || !stockToSell) {
         return res.status(404).json({
             err: "No stock with that name found",
-        });
-    }
-    try {
-        await objects.changeQuantityInMarket(stock, amount);
-    } catch (e) {
-        console.log(e);
-        return res.status(400).json({
-            err: "error changing quantity in market"
         });
     }
     try {

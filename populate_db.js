@@ -18,14 +18,14 @@ const existingTickers = [];
     await user.insertUser("test@test.com", "pass");
 
     const now = new Date();
-    for (let j = 0; j < 3; j++) {
+    for (let j = 0; j < 15; j++) {
         const companyName = faker.company.companyName();
         const ticker = generateTicker(companyName);
         const catchPhrase = faker.company.catchPhrase();
         const ceo = faker.name.firstName() + " " + faker.name.lastName();
-        const startPrice = getRandomInt(20, 200);
+        const startPrice = getRandomInt(50, 200);
         const startAmount = getRandomInt(100000, 1000000000000);
-        const volatility = (Math.random() * (0.10 - 0.01) + 0.01);
+        const volatility = (Math.random() * (0.01 - 0.005) + 0.005);
         const history = generateHistory(now, startPrice, volatility);
         await objects.insertObject(
             ticker,
@@ -92,7 +92,7 @@ function generateHistory(initDate, initPrice, volatility) {
 function getNewPrice(old, volatility) {
     const random = Math.random();
     let changeInPercent = (2 * (volatility * random));
-    if (changeInPercent > volatility) {
+    if (old > 10 && changeInPercent > volatility) {
         changeInPercent -= (2 * volatility);
     }
     let change = old * changeInPercent;

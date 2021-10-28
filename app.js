@@ -3,16 +3,19 @@ const bodyParser = require("body-parser");
 const cors = require('cors');
 const morgan = require('morgan');
 const jwt = require('jsonwebtoken');
-const cookieParser = require('cookie-parser')
+const cookieParser = require('cookie-parser');
 
-const index = require("./routes/index")
-const user = require("./routes/user")
-const market = require("./routes/market")
+const index = require("./routes/index");
+const user = require("./routes/user");
+const market = require("./routes/market");
+const dotenv = require("dotenv")
 
+
+dotenv.config()
 const app = express();
-const port = 1337;
+const port = 1338;
 
-var whiteList = ['http://localhost:3000', "https://oscarlang.me"];
+var whiteList = ['http://localhost:3000', "https://stocksocket.oscarlang.tech"];
 
 
 var corsOptions = {
